@@ -1,0 +1,33 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy to VPS using SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Navigate to the project directory on your VPS. 
+            # Make sure to update 'BrainLoom-MicroServices' if your folder is named differently.
+            cd ~/BrainLoom-MicroServices
+            
+            # Pull the latest changes from the branch (main/master)
+            git pull origin main
+            
+            # Rebuild and restart the Docker containers
+            docker-compose down
+            docker-compose up -d --build
