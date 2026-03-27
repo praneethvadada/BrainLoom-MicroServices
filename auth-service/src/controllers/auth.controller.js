@@ -24,6 +24,17 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const result = await require("../services/auth.service").resendOTP(email);
+    res.json(result);
+  } catch (error) {
+    console.error("Auth Controller Error:", error);
+    res.status(400).json({ message: error.message || "Internal Server Error" });
+  }
+};
+
 
 exports.login = async (req, res) => {
   try {

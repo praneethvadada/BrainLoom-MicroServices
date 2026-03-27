@@ -25,7 +25,9 @@ exports.verifyOTP = async (email, otp) => {
 
   return { message: "Email verified successfully" };
 };
-exports.generateAndStoreOTP = async (userId) => {
+const emailService = require("./email.service");
+
+exports.generateAndStoreOTP = async (userId, userEmail) => {
   const otp = generateOTP();
 
   const expires = new Date();
@@ -38,8 +40,11 @@ exports.generateAndStoreOTP = async (userId) => {
     expires_at: expires
   });
 
-  // In production: send email here
-  console.log("OTP:", otp);
+  // Call the new Hostinger email service
+  if (userEmail) {
+    await emailService.sendOTP(userEmail, otp);
+  }
+  console.log("OTP successfully generated and scheduled:", otp);
 
   return otp;
 };

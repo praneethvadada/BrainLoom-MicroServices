@@ -200,8 +200,17 @@ router.post(
 );
 
 
+const rateLimit = require("express-rate-limit");
+
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // maximum 3 resets per window
+  message: { message: "Too many OTP requests from this IP. Please wait 15 minutes." }
+});
+
 router.post("/login", controller.login);
 router.post("/verify-otp", controller.verifyOTP);
+router.post("/resend-otp", otpLimiter, controller.resendOTP);
 
 router.post(
   "/register",
@@ -214,5 +223,7 @@ router.post(
   ],
   controller.register
 );
+
+router.use("/admin", require("./admin.routes"));
 
 module.exports = router;

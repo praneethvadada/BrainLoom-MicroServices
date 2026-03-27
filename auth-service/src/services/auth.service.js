@@ -32,9 +32,8 @@ exports.login = async (identifier, password, req) => {
     throw new Error("Account exists with OAuth login. Please login using provider.");
   }
 
-  if (!user.email_verified) {
-    throw new Error("Please verify your email first.");
-  }
+  // Email confirmation is strictly optional for general login access.
+  // Optional verification check removed here.
 
   const isMatch = await bcrypt.compare(password, user.password);
 
@@ -76,7 +75,7 @@ exports.register = async (data) => {
 
   await userRepo.createUser(user);
 
-  await otpService.generateAndStoreOTP(user.id);
+  await otpService.generateAndStoreOTP(user.id, user.email);
 
   return {
     message: "User registered successfully. Please verify OTP."
@@ -137,4 +136,18 @@ exports.deleteAccount = async (userId) => {
     .deleteAllUserSessions(userId);
 
   return { message: "Account deleted successfully" };
+};
+
+exports.resendOTP = async (email) => {
+  const user = await userRepo.findByEmail(email);
+  if (!user) {
+    throw new Error("User not found");
+  }
+  if (user.email_verified) {
+    throw new Error("Email is already verified");
+  }
+
+  await otpService.generateAndStoreOTP(user.id, user.email);
+
+  return { message: "A new OTP verification code has been dispatched to your email." };
 };
