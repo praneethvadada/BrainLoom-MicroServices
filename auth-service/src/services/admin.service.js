@@ -31,9 +31,7 @@ exports.login = async (email, password, req) => {
   const prefixedId = `admin_${admin.id}`;
 
   const accessToken = jwtUtil.generateAccessToken(prefixedId);
-  const refreshToken = jwtUtil.generateRefreshToken(prefixedId);
-  
-  await sessionService.createUserSession(prefixedId, refreshToken, req);
-  
-  return { accessToken, refreshToken };
+  // Bypassing refresh token table session due to strict MySQL FK constraints on the users table.
+  // Admins will receive a standalone long-lived accessToken structure.
+  return { accessToken };
 };
