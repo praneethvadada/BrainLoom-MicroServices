@@ -6,7 +6,7 @@ services:
       context: ./api-gateway
     container_name: api-gateway
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     env_file:
       - ./api-gateway/.env
     environment:
