@@ -3,7 +3,6 @@ const { publicKey } = require("../config/jwt");
 const authService = require("../services/auth.service");
 
 module.exports = async (req, res, next) => {
-  console.log("Authorization header:", req.headers.authorization);
   try {
 
     const authHeader = req.headers.authorization;
@@ -31,16 +30,11 @@ module.exports = async (req, res, next) => {
       });
     }
     
-    req.headers["x-user-id"] = claims.id;
-    req.headers["x-user-role"] = claims.role;
+    req.headers["x-user-id"]      = claims.id;
+    req.headers["x-user-role"]    = claims.role;
     req.headers["x-user-premium"] = claims.is_premium;
-
-
-    console.log("Gateway attaching headers:", {
-  userId: req.headers["x-user-id"],
-  role: req.headers["x-user-role"],
-  premium: req.headers["x-user-premium"]
-});
+    req.headers["x-user-scope"]   = claims.scope   || "";
+    req.headers["x-user-super"]   = claims.is_super ? "true" : "false";
 
     next();
 

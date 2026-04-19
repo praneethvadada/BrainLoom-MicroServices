@@ -32,21 +32,32 @@ export const createTopic = async (req, res) => {
 
     if (!title || !slug) return res.status(400).json({ message: "title and slug required" });
 
+    // author_id is an INT FK → users table.
+    // Admins use prefixed IDs like "admin_1" and are NOT in the users table.
+    // Set author_id to null for admin-created topics.
+    const rawId    = req.user?.id ? String(req.user.id) : null;
+    const authorId = rawId && !rawId.startsWith("admin_")
+      ? (parseInt(rawId) || null)
+      : null;
+
     const id = await TopicModel.createTopicWithOrder({
-      parent_id,
+      parent_id:   parent_id,
       title,
       slug,
       description,
       order_no,
-      author_id: req.user?.id || null,
-      metadata: req.body.metadata || null,
+      author_id:   authorId,
+      metadata:    req.body.metadata || null,
       is_published: is_published ? 1 : 0
     });
 
     return res.status(201).json({ id });
   } catch (err) {
     console.error("createTopic error:", err);
-    if (err && err.code === "ER_DUP_ENTRY") return res.status(409).json({ message: "Slug conflict under same parent" });
+    if (err?.code === "DUPLICATE_SLUG")
+      return res.status(409).json({ message: err.message });
+    if (err?.code === "ER_DUP_ENTRY")
+      return res.status(409).json({ message: "Slug conflict under same parent" });
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -135,9 +146,10 @@ export const getTopicBySlugPath = async (req, res) => {
 
     if (!topic) return res.status(404).json({ message: "Topic not found" });
 
-    const blocks = await ContentBlock.getBlocksByTopic(topic.id);
+    // blocks are now served separately via /api/topic-blocks — fetch them there
     const children = await Topic.getChildren(topic.id);
-    return res.json({ topic, blocks, children });
+    return res.json({ topic, blocks: [], children });
+
   } catch (err) {
     console.error("getTopicBySlugPath error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -160,11 +172,27 @@ export const resolveByRootPath = async (req, res, next) => {
     if (!topic) topic = await Topic.getTopicBySlugPath(segments);
     if (!topic) return res.status(404).json({ message: "Not found" });
 
-    const blocks = await ContentBlock.getBlocksByTopic(topic.id);
     const children = await Topic.getChildren(topic.id);
-    return res.json({ topic, blocks, children });
+    return res.json({ topic, blocks: [], children });
+
   } catch (err) {
     console.error("resolveByRootPath error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* Check Slug Availability */
+export const checkSlugAvailabilityController = async (req, res) => {
+  try {
+    const { slug, parent_id } = req.query;
+    if (!slug) return res.status(400).json({ message: "slug required" });
+    
+    const parsedParentId = (parent_id && parent_id !== "null") ? Number(parent_id) : null;
+    const isAvailable = await TopicModel.checkSlugAvailability(parsedParentId, slug);
+    
+    return res.json({ available: isAvailable });
+  } catch (err) {
+    console.error("checkSlugAvailabilityController error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

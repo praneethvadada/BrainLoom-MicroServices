@@ -1,6 +1,6 @@
 import { AuthResponse, TopicListResponse, TopicDetailResponse, Topic } from '../types';
 
-const API_BASE_URL = 'https://api.brainloom.in/api';
+const API_BASE_URL = 'https://api.brainloom.in/api/v1';
 
 // Helper to get headers with Auth token
 const getAuthHeaders = () => {
@@ -12,7 +12,7 @@ const getAuthHeaders = () => {
 };
 
 export const login = async (email: string, password: string): Promise<AuthResponse> => {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const response = await fetch(`${API_BASE_URL}/auth/admin/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -24,7 +24,16 @@ export const login = async (email: string, password: string): Promise<AuthRespon
     throw new Error('Login failed');
   }
 
-  return response.json();
+  const data = await response.json();
+  
+  return {
+    token: data.accessToken,
+    user: {
+      id: "admin",
+      email: email,
+      name: "Admin"
+    }
+  } as any;
 };
 
 export const fetchRootTopics = async (): Promise<TopicListResponse> => {
@@ -49,6 +58,21 @@ export const fetchTopicBySlug = async (slugPath: string): Promise<TopicDetailRes
     throw new Error(`Failed to fetch topic details (${response.status})`);
   }
   return response.json();
+};
+
+export const checkSlug = async (slug: string, parentId: number | null = null): Promise<boolean> => {
+  const params = new URLSearchParams({ slug });
+  if (parentId !== null) params.append('parent_id', parentId.toString());
+  
+  const response = await fetch(`${API_BASE_URL}/topics/slug-check?${params.toString()}`, {
+    headers: getAuthHeaders(),
+  });
+  
+  if (!response.ok) {
+    return false;
+  }
+  const data = await response.json();
+  return data.available;
 };
 
 export const createTopic = async (data: { 

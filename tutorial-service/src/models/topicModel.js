@@ -18,6 +18,15 @@ export const getChildren = async (parent_id) => {
   return rows;
 };
 
+/* Check if slug is available under parent */
+export const checkSlugAvailability = async (parent_id, slug) => {
+  const [rows] = await db.query(
+    "SELECT 1 FROM topics WHERE parent_id <=> ? AND slug = ? LIMIT 1",
+    [parent_id, slug]
+  );
+  return rows.length === 0;
+};
+
 
 /* Get by full_path */
 export const getTopicByFullPath = async (fullPath) => {
@@ -253,7 +262,34 @@ export const createTopicWithOrder = async (payload) => {
 
     const normalizedSlug = String(slug).trim().toLowerCase();
 
+    // ── Slug uniqueness check per parent level ────────────────────────────────
+    // Rule: slug must be unique among siblings (same parent_id).
+    // Two different parents CAN have children with the same slug
+    // (e.g. python/variables AND java/variables are both valid).
+    // But python/variables twice is NOT allowed.
+    let dupRows;
+    if (parent_id === null) {
+      [dupRows] = await conn.query(
+        `SELECT id FROM topics WHERE parent_id IS NULL AND slug = ? LIMIT 1`,
+        [normalizedSlug]
+      );
+    } else {
+      [dupRows] = await conn.query(
+        `SELECT id FROM topics WHERE parent_id = ? AND slug = ? LIMIT 1`,
+        [parent_id, normalizedSlug]
+      );
+    }
+    if (dupRows && dupRows.length > 0) {
+      await conn.rollback();
+      conn.release();
+      const err = new Error(`A topic with slug "${normalizedSlug}" already exists at this level.`);
+      err.code = "DUPLICATE_SLUG";
+      throw err;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // compute current max order for siblings
+
     let maxRows;
     if (parent_id === null) {
       [maxRows] = await conn.query(`SELECT COALESCE(MAX(order_no), -1) AS m FROM topics WHERE parent_id IS NULL`);

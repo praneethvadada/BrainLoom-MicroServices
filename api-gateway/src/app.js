@@ -15,6 +15,11 @@ const authProxy = require("./proxies/auth.proxy");
 const tutorialProxy = require("./proxies/tutorial.proxy");
 const premiumProxy = require("./proxies/premium.proxy");
 const analyticsProxy = require("./proxies/analytics.proxy");
+const topicsProxy = require("./proxies/topics.proxy");
+const blocksProxy = require("./proxies/blocks.proxy");
+const mediaProxy  = require("./proxies/media.proxy");
+
+const optionalAuthMiddleware = require("./middlewares/optionalAuth.middleware");
 
 const app = express();
 
@@ -31,8 +36,18 @@ app.use("/health", healthRoutes);
 // auth service
 // app.use("/auth", authProxy);
 app.use("/api/v1/auth", authProxy);
-// tutorial service (ONLY ONCE)
-app.use("/tutorials", authMiddleware, tutorialProxy);
+
+// topics proxy (domains tree)
+app.all(/^\/api\/v1\/topics/, optionalAuthMiddleware, topicsProxy);
+
+// blocks proxy (page content blocks)
+app.all(/^\/api\/v1\/topic-blocks/, optionalAuthMiddleware, blocksProxy);
+
+// media proxy (S3 image uploads)
+app.all(/^\/api\/v1\/media/, optionalAuthMiddleware, mediaProxy);
+
+
+
 
 // premium service
 app.use("/premium", authMiddleware, premiumProxy);

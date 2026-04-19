@@ -20,7 +20,8 @@ exports.getClaims = async (req, res) => {
         is_premium: 0,
         email_verified: 1,
         is_deleted: 0,
-        is_super: admin.is_super
+        is_super: admin.is_super,
+        scope: admin.scope || "tutorial"
       });
     }
 

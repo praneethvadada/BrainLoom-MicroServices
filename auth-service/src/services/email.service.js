@@ -42,3 +42,35 @@ exports.sendOTP = async (to, otp) => {
     return false;
   }
 };
+
+exports.sendPasswordResetOTP = async (to, otp, name = "Admin") => {
+  try {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.log(`[MOCK EMAIL to ${to}] Password Reset OTP: ${otp}`);
+      return true;
+    }
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to,
+      subject: "BrainLoom Admin — Password Reset OTP",
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <h2>Password Reset Request</h2>
+          <p>Hi ${name},</p>
+          <p>Use the OTP below to reset your BrainLoom admin password. It expires in <strong>10 minutes</strong>.</p>
+          <div style="background:#f4f4f4;padding:15px;text-align:center;border-radius:5px;margin:20px 0;">
+            <h1 style="letter-spacing:5px;color:#333;margin:0;">${otp}</h1>
+          </div>
+          <p>If you did not request this, you can ignore this email.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (err) {
+    console.error("Error sending password reset OTP:", err);
+    return false;
+  }
+};
